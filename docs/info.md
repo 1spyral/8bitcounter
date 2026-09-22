@@ -9,22 +9,21 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-This project implements an 8-bit programmable binary counter with an asynchronous reset, synchronous load, and tri-state outputs.
+This project implements an 8-bit programmable binary counter with asynchronous reset, synchronous load, and tri-state outputs.
 
-On each rising edge of the clock, the counter increments by one. Since the counter is 8 bits wide, it counts from 0 to 255 and wraps back to 0 after reaching 255.
+On each rising edge of the clock, the counter increments by one, wrapping from 255 back to 0.
 
-The `LOAD` input allows a custom 8-bit value from `DATA[7:0]` to be loaded into the counter. Loading is synchronous, so the new value is stored on the next rising edge of the clock when `LOAD` is high. When `LOAD` is low, normal counting continues.
+The `uio[7:0]` pins are shared between loading and output. When `LOAD` is high, they act as inputs and their 8-bit value is loaded into the counter on the next rising clock edge.
 
-The active-low reset (`rst_n`) is asynchronous. Pulling `rst_n` low immediately resets the counter to 0 without waiting for a clock edge.
+When `LOAD` is low and `OE` is high, `uio[7:0]` outputs the current counter value. When `OE` is low, the pins are placed in the high-impedance (`Z`) state.
 
-The `OE` (output enable) input controls the tri-state output. When `OE` is high, `COUNT[7:0]` outputs the current counter value. When `OE` is low, the outputs are placed in the high-impedance (`Z`) state.
+The active-low `rst_n` asynchronously resets the counter to 0.
 
 ### Pin usage
 
-- `DATA[7:0]` — 8-bit value used for synchronous loading
-- `LOAD` — load `DATA[7:0]` on the next rising clock edge
-- `OE` — enable the counter outputs
-- `COUNT[7:0]` — current 8-bit counter value
+- `LOAD` — enable synchronous loading
+- `OE` — enable counter output
+- `uio[7:0]` — 8-bit load input / counter output
 - `clk` — counter clock
 - `rst_n` — active-low asynchronous reset
 

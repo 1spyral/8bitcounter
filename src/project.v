@@ -16,24 +16,24 @@ module tt_um_1spyral (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+  assign uo_out = '0;
+  
+  assign uio_oe  = (ui_in[1] && !ui_in[0]) ? '1 : '0;
 
   reg [7:0] count;
 
   always @(posedge clk or negedge rst_n) begin
     if (!rst_n)
       count <= '0;
-    else if (uio_in[0])
-      count <= ui_in;
+    else if (ui_in[0])
+      count <= uio_in;
     else
       count <= count + 1;
   end
 
-  assign uo_out = uio_in[1] ? count : 8'bz;
+  assign uio_out = count;
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, uio_in[7:2], 1'b0};
+  wire _unused = &{ena, ui_in[7:2], 1'b0};
 
 endmodule

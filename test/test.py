@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 import cocotb
-from cocotb.clock import Clock, Timer
-from cocotb.triggers import ClockCycles
+from cocotb.clock import Clock
+from cocotb.triggers import ClockCycles, Timer
 
 async def wait(dut, cycles=0, duration=0, unit="ns"):
     if cycles > 0:
@@ -32,70 +32,79 @@ async def test_project(dut):
     dut.rst_n.value = 1
 
     # Enable output
-    dut.uio_in.value = 0b00000010  # LOAD=0, OE=1
+    dut.ui_in.value = 0b00000010  # LOAD=0, OE=1
 
     # Test counting
     dut._log.info("Test counting")
 
     await wait(dut, 1, 1)
-    assert dut.uo_out.value == 1
+    assert dut.uio_out.value == 1
 
     await wait(dut, 1, 1)
-    assert dut.uo_out.value == 2
+    assert dut.uio_out.value == 2
 
     await wait(dut, 1, 1)
-    assert dut.uo_out.value == 3
+    assert dut.uio_out.value == 3
 
     # Test synchronous load
     dut._log.info("Test synchronous load")
 
-    dut.ui_in.value = 100
-    dut.uio_in.value = 0b00000011  # LOAD=1, OE=1
+    dut.uio_in.value = 100
+    dut.ui_in.value = 0b00000011  # LOAD=1, OE=1
+
+    # LOAD takes priority over OE, so bus must be in input mode
+    await wait(dut, 0, 1)
+    assert dut.uio_oe.value == 0
 
     # Nothing should change until the next clock
     await wait(dut, 0, 1, "us")
-    assert dut.uo_out.value == 3
+    assert dut.uio_out.value == 3
 
     # Now 100 should be loaded
     await wait(dut, 1, 1)
-    assert dut.uo_out.value == 100
+    assert dut.uio_out.value == 100
 
     # Disable load, leave output enabled
-    dut.uio_in.value = 0b00000010
+    dut.ui_in.value = 0b00000010  # LOAD=0, OE=1
 
     await wait(dut, 1, 1)
-    assert dut.uo_out.value == 101
+    assert dut.uio_out.value == 101
 
     # Test overflow
     dut._log.info("Test overflow")
 
-    dut.ui_in.value = 255
-    dut.uio_in.value = 0b00000011  # LOAD=1, OE=1
+    dut.uio_in.value = 255
+    dut.ui_in.value = 0b00000011  # LOAD=1, OE=1
 
     await wait(dut, 1, 1)
-    assert dut.uo_out.value == 255
+    assert dut.uio_out.value == 255
 
-    dut.uio_in.value = 0b00000010  # LOAD=0, OE=1
+    dut.ui_in.value = 0b00000010  # LOAD=0, OE=1
 
     await wait(dut, 1, 1)
-    assert dut.uo_out.value == 0
+    assert dut.uio_out.value == 0
 
     # Test tri-state output
     dut._log.info("Test output enable")
 
-    dut.uio_in.value = 0b00000000  # LOAD=0, OE=0
+    dut.ui_in.value = 0b00000000  # LOAD=0, OE=0
 
     await wait(dut, 0, 1, "us")
-    assert str(dut.uo_out.value) == "ZZZZZZZZ"
+    assert dut.uio_oe.value == 0
+
+    dut.ui_in.value = 0b00000010  # LOAD=0, OE=1
+    await wait(dut, 0, 1, "us")
+
+    assert dut.uio_oe.value == 0xFF
 
     # Test asynchronous reset
     dut._log.info("Test asynchronous reset")
 
     # Re-enable output and let the counter reach a non-zero value
-    dut.uio_in.value = 0b00000010  # LOAD=0, OE=1
+    dut.ui_in.value = 0b00000010  # LOAD=0, OE=1
 
     await wait(dut, 3)
-    assert dut.uo_out.value != 0
+    assert dut.uio_out.value != 0
 
     # Assert reset asynchronously
     dut.rst_n.value = 0
@@ -104,7 +113,7 @@ async def test_project(dut):
     await wait(dut, 0, 1, "us")
 
     # Counter should already be reset without waiting for a clock edge
-    assert dut.uo_out.value == 0
+    assert dut.uio_out.value == 0
 
     # Release reset
     dut.rst_n.value = 1
